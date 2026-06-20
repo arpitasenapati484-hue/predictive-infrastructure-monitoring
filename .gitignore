@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 storage/metrics.csv
 storage/metrics.db 
+ml/anomaly_model.pkl           
