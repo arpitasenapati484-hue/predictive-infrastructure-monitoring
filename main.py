@@ -1,9 +1,9 @@
 from collector.metrics import collect_metrics
 from storage.store import save_to_csv
 from ml.anomaly import train_model, detect_anomaly
-from alerts.email_alert import send_email_alert
+from alerts.telegram_alert import send_telegram_alert
 import time, os, joblib
-from config import COLLECTION_INTERVAL_SEC, ANOMALY_MODEL_PATH
+from config import COLLECTION_INTERVAL_SEC, ANOMALY_MODEL_PATH, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 model = None
 if os.path.exists(ANOMALY_MODEL_PATH):
@@ -30,5 +30,10 @@ if __name__ == "__main__":
 
         if model and detect_anomaly(model, data):
             print("🚨 Anomaly detected!", data)
+            send_telegram_alert(
+                f"🚨 Anomaly detected!\nCPU: {data['cpu_percent']}%\nRAM: {data['ram_percent']}%\nDisk: {data['disk_percent']}%",
+                bot_token=TELEGRAM_BOT_TOKEN,
+                chat_id=TELEGRAM_CHAT_ID
+            )
 
         time.sleep(COLLECTION_INTERVAL_SEC)
