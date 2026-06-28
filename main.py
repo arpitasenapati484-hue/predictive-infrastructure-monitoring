@@ -1,9 +1,9 @@
 from collector.metrics import collect_metrics
 from storage.store import save_to_csv
 from ml.anomaly import train_model, detect_anomaly
-from alerts.email_alert import send_email_alert
+from alerts.telegram_alert import send_telegram_alert
 import time, os, joblib
-from config import COLLECTION_INTERVAL_SEC, ANOMALY_MODEL_PATH
+from config import COLLECTION_INTERVAL_SEC, ANOMALY_MODEL_PATH, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 model = None
 if os.path.exists(ANOMALY_MODEL_PATH):
@@ -11,18 +11,29 @@ if os.path.exists(ANOMALY_MODEL_PATH):
 
 if __name__ == "__main__":
     count = 0
+    print("🚀 Predictive Infrastructure Monitor starting...")
     while True:
         data = collect_metrics()
+
+        if data is None:
+            print("⚠️ Skipping this cycle due to collector error.")
+            time.sleep(COLLECTION_INTERVAL_SEC)
+            continue
+
         save_to_csv(data)
         count += 1
-        print("Logged:", data)
+        print(f"[{count}] Logged: CPU={data['cpu_percent']}% RAM={data['ram_percent']}% Disk={data['disk_percent']}%")
 
-        if count == 20:  # retrain once you have some data
+        if count == 20:
             model = train_model()
-            print("Model trained!")
+            print("✅ Model trained!")
 
         if model and detect_anomaly(model, data):
-            print("⚠️ Anomaly detected:", data)
-            # send_email_alert(...) — we'll wire real credentials in later
+            print("🚨 Anomaly detected!", data)
+            send_telegram_alert(
+                f"🚨 Anomaly detected!\nCPU: {data['cpu_percent']}%\nRAM: {data['ram_percent']}%\nDisk: {data['disk_percent']}%",
+                bot_token=TELEGRAM_BOT_TOKEN,
+                chat_id=TELEGRAM_CHAT_ID
+            )
 
-        time.sleep(COLLECTION_INTERVAL_SEC)           
+        time.sleep(COLLECTION_INTERVAL_SEC)
